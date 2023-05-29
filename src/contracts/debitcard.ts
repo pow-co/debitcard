@@ -1,4 +1,4 @@
-import * as pack from '../../package.json'
+const VERSION = '0.2.1'
 
 import {
     assert,
@@ -53,7 +53,7 @@ export class DebitCard extends SmartContract {
 
         const player = PubKey(toByteString(player_public_key))
 
-        const version = toByteString(pack.version, true)
+        const version = toByteString(VERSION, true)
 
         return new DebitCard(app, player, true, version)
     }

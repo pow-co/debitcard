@@ -1,6 +1,6 @@
 {
   "name": "debitcard",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "An sCrypt Smart Contract for App-Managed Wallets.",
   "author": "Powco",
   "main": "./dist/src/index.js",
