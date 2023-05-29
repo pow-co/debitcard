@@ -1,33 +1,129 @@
+import * as pack from '../../package.json'
+
 import {
     assert,
     ByteString,
+    PubKey,
     toByteString,
     method,
     prop,
-    sha256,
-    Sha256,
     SmartContract,
+    Sig,
+    hash256,
+    hash160,
+    Utils,
 } from 'scrypt-ts'
+
+interface MintDebitCard {
+    app_public_key: string
+    player_public_key: string
+}
 
 export class DebitCard extends SmartContract {
     @prop()
-    hash: Sha256
+    app: PubKey
 
-    constructor(hash: Sha256) {
+    @prop()
+    player: PubKey
+
+    @prop()
+    version: ByteString
+
+    @prop(true)
+    active: boolean
+
+    constructor(
+        app: PubKey,
+        player: PubKey,
+        active: boolean,
+        version: ByteString
+    ) {
         super(...arguments)
-        this.hash = hash
+        this.app = app
+        this.player = player
+        this.active = active
+        this.version = version
     }
 
-    static fromSecretMessage(message: string): DebitCard {
-        const hash = sha256(toByteString('dApp Swiss Bank Unlock Secret'))
+    static mint({
+        app_public_key,
+        player_public_key,
+    }: MintDebitCard): DebitCard {
+        const app = PubKey(toByteString(app_public_key))
 
-        const card = new DebitCard(hash)
+        const player = PubKey(toByteString(player_public_key))
 
-        return card
+        const version = toByteString(pack.version, true)
+
+        return new DebitCard(app, player, true, version)
     }
 
     @method()
-    public unlock(message: ByteString) {
-        assert(sha256(message) == this.hash, 'Hash does not match')
+    public charge(value: bigint, reason: ByteString, signature: Sig) {
+        const outputs = this.buildStateOutput(this.ctx.utxo.value - value)
+
+        assert(this.active)
+
+        assert(this.ctx.hashOutputs === hash256(outputs))
+
+        assert(this.checkSig(signature, this.app))
+    }
+
+    @method()
+    public freeze(signature: Sig) {
+        this.active = false
+
+        const outputs = this.buildStateOutput(this.ctx.utxo.value)
+
+        assert(this.ctx.hashOutputs === hash256(outputs))
+
+        assert(this.checkSig(signature, this.player))
+    }
+
+    @method()
+    public activate(signature: Sig) {
+        this.active = true
+
+        const outputs = this.buildStateOutput(this.ctx.utxo.value)
+
+        assert(this.ctx.hashOutputs === hash256(outputs))
+
+        assert(this.checkSig(signature, this.player))
+    }
+
+    @method()
+    public deposit(value: bigint, reason: ByteString) {
+        console.log('deposit', { value, reason })
+
+        const outputs = this.buildStateOutput(this.ctx.utxo.value + value)
+
+        assert(this.ctx.hashOutputs === hash256(outputs))
+    }
+
+    @method()
+    public withdraw(value: bigint, reason: ByteString, signature: Sig) {
+        console.log('withdraw', { value, reason, signature })
+
+        const outputs = this.buildStateOutput(this.ctx.utxo.value - value)
+
+        assert(this.ctx.hashOutputs === hash256(outputs))
+
+        assert(this.checkSig(signature, this.player))
+    }
+
+    @method()
+    public cancel(reason: ByteString, signature: Sig) {
+        if (!this.checkSig(signature, this.player)) {
+            assert(this.checkSig(signature, this.app))
+
+            const outputs = Utils.buildPublicKeyHashOutput(
+                hash160(this.player),
+                this.ctx.utxo.value
+            )
+
+            assert(this.ctx.hashOutputs === hash256(outputs))
+        }
+
+        assert(true)
     }
 }

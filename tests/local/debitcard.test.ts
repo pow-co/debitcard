@@ -1,8 +1,10 @@
 import { expect, use } from 'chai'
-import { MethodCallOptions, sha256, toByteString } from 'scrypt-ts'
+import { MethodCallOptions, toByteString } from 'scrypt-ts'
 import { DebitCard } from '../../src/contracts/debitcard'
 import { getDummySigner, getDummyUTXO } from '../utils/txHelper'
+import { myPublicKey } from '../utils/privateKey'
 import chaiAsPromised from 'chai-as-promised'
+import { PubKey } from 'scrypt-ts'
 use(chaiAsPromised)
 
 describe('Test SmartContract `DebitCard`', () => {
@@ -10,7 +12,17 @@ describe('Test SmartContract `DebitCard`', () => {
 
     before(async () => {
         await DebitCard.compile()
-        instance = new DebitCard(sha256(toByteString('hello world', true)))
+
+        instance = new DebitCard(
+            PubKey(toByteString(myPublicKey.toString(), true)),
+
+            PubKey(toByteString(myPublicKey.toString(), true)),
+
+            true,
+
+            toByteString('0.0.1', true)
+        )
+
         await instance.connect(getDummySigner())
     })
 
@@ -32,5 +44,20 @@ describe('Test SmartContract `DebitCard`', () => {
                 fromUTXO: getDummyUTXO(),
             } as MethodCallOptions<DebitCard>)
         ).to.be.rejectedWith(/Hash does not match/)
+    })
+
+    it('should allow the holder of the debit card to cancel the card', async () => {
+        const debitCard = new DebitCard(
+            PubKey(toByteString(myPublicKey.toString(), true)),
+
+            PubKey(toByteString(myPublicKey.toString(), true)),
+
+            true,
+
+            toByteString('0.0.1', true)
+        )
+        const result = await debitCard.methods.call('cancel')
+
+        console.log(result)
     })
 })

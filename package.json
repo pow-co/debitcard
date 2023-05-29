@@ -1,8 +1,9 @@
 {
   "name": "debitcard",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "An sCrypt Smart Contract for App-Managed Wallets.",
-  "author": "",
+  "author": "Powco",
+  "main": "./dist/src/index.js",
   "scripts": {
     "prebuild": "npm run clean",
     "build": "npx scrypt-cli compile && tsc",
